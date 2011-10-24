@@ -193,16 +193,9 @@ class Claim {
     $provider_id = $this->encounter['provider_id'];
     $sql = "SELECT * FROM users WHERE id = '$provider_id'";
     $this->provider = sqlQuery($sql);
-    // Selecting the billing facility assigned  to the encounter.  If none,
-    // try the first (and hopefully only) facility marked as a billing location.
-    if (empty($this->encounter['billing_facility'])) {
-      $sql = "SELECT * FROM facility " .
-        "ORDER BY billing_location DESC, id ASC LIMIT 1";
-    }
-    else {
-      $sql = "SELECT * FROM facility " .
-      " where id ='" . addslashes($this->encounter['billing_facility']) . "' ";
-    }
+// Selecting the billing facility assigned  to the service facility
+    $sql = "SELECT * FROM facility " .
+    " where id ='" . addslashes($this->encounter['billing_facility']) . "' ";
     $this->billing_facility = sqlQuery($sql);
 
     $sql = "SELECT * FROM insurance_numbers WHERE " .
@@ -221,7 +214,6 @@ class Claim {
       "ON fpa.id = forms.form_id WHERE " .
       "forms.encounter = '{$this->encounter_id}' AND " .
       "forms.pid = '{$this->pid}' AND " .
-      "forms.deleted = 0 AND " .
       "forms.formdir = 'misc_billing_options' " .
       "ORDER BY forms.date";
     $this->billing_options = sqlQuery($sql);
@@ -284,7 +276,7 @@ class Claim {
       $coinsurance = 0;
       $inslabel = ($this->payerSequence($ins) == 'S') ? 'Ins2' : 'Ins1';
       $insnumber = substr($inslabel, 3);
-	  
+
       // Compute this procedure's patient responsibility amount as of this
       // prior payer, which is the original charge minus all insurance
       // payments and "hard" adjustments up to this payer.
@@ -302,8 +294,6 @@ class Claim {
             if ($value['plv'] > 0 && $value['plv'] <= $insnumber)
               $ptresp += $value['chg']; // adjustments are negative charges
           }
-          
-          $msp = isset( $value['msp'] ) ? $value['msp'] : null; // record the reason for adjustment
         }
         else {
           // Old method: With SQL-Ledger payer level was stored in the memo.
@@ -403,16 +393,8 @@ class Claim {
       $thispaidanything = 0;
       foreach($this->invoice as $codekey => $codeval) {
         foreach ($codeval['dtl'] as $key => $value) {
-          if (isset($value['plv'])) {
-            // New method; plv exists to indicate the payer level.
-            if ($value['plv'] == $insnumber) {
-              $thispaidanything += $value['pmt'];
-            }
-          }
-          else {
-            if (preg_match("/$inslabel/i", $value['src'], $tmp)) {
-              $thispaidanything += $value['pmt'];
-            }
+          if (preg_match("/$inslabel/i", $value['src'], $tmp)) {
+            $thispaidanything += $value['pmt'];
           }
         }
       }
@@ -428,9 +410,9 @@ class Claim {
       $coinsurance = sprintf('%.2f', $coinsurance);
 
       if ($date && $deductible != 0)
-        $aadj[] = array($date, 'PR', '1', $deductible, $msp);
+        $aadj[] = array($date, 'PR', '1', $deductible);
       if ($date && $coinsurance != 0)
-        $aadj[] = array($date, 'PR', '2', $coinsurance, $msp);
+        $aadj[] = array($date, 'PR', '2', $coinsurance);
 
     } // end if
 
@@ -490,17 +472,8 @@ class Claim {
     $amount = 0;
     foreach($this->invoice as $codekey => $codeval) {
       foreach ($codeval['dtl'] as $key => $value) {
-        if (isset($value['plv'])) {
-          // New method; plv exists to indicate the payer level.
-          if ($value['plv'] == 0) { // 0 indicates patient
-            $amount += $value['pmt'];
-          }
-        }
-        else {
-          // Old method: With SQL-Ledger payer level was stored in the memo.
-          if (!preg_match("/Ins/i", $value['src'], $tmp)) {
-            $amount += $value['pmt'];
-          }
+        if (!preg_match("/Ins/i", $value['src'], $tmp)) {
+          $amount += $value['pmt'];
         }
       }
     }
@@ -546,7 +519,24 @@ class Claim {
   function x12gsisa05() {
     return $this->x12_partner['x12_isa05'];
   }
+//adding in functions for isa 01 - isa 04
 
+  function x12gsisa01() {
+    return $this->x12_partner['x12_isa01'];
+  }
+
+  function x12gsisa02() {
+    return $this->x12_partner['x12_isa02'];
+  }
+  
+   function x12gsisa03() {
+    return $this->x12_partner['x12_isa03'];
+  }
+   function x12gsisa04() {
+    return $this->x12_partner['x12_isa04'];
+  }
+      
+/////////
   function x12gsisa07() {
     return $this->x12_partner['x12_isa07'];
   }
@@ -941,7 +931,7 @@ class Claim {
     if (preg_match('/^N4(\S+)\s+(\S\S)(.*)/', $ndcinfo, $tmp)) {
       $ndc = $tmp[1];
       if (preg_match('/^(\d+)-(\d+)-(\d+)$/', $ndc, $tmp)) {
-        return sprintf('%05d%04d%02d', $tmp[1], $tmp[2], $tmp[3]);
+        return sprintf('%05d-%04d-%02d', $tmp[1], $tmp[2], $tmp[3]);
       }
       return x12clean($ndc); // format is bad but return it anyway
     }
@@ -1046,10 +1036,6 @@ class Claim {
 
   function additionalNotes() {
     return x12clean(trim($this->billing_options['comments']));
-  }
-
-  function dateInitialTreatment() {
-    return str_replace('-', '', substr($this->billing_options['date_initial_treatment'], 0, 10));
   }
 
   // Returns an array of unique diagnoses.  Periods are stripped.
