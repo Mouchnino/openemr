@@ -97,3 +97,18 @@ CREATE INDEX `patient_id` ON `prescriptions` (`patient_id`);
 ALTER TABLE `version` ADD COLUMN `v_realpatch` int(11) NOT NULL DEFAULT 0;
 #EndIf
 
+#IfMissingColumn x12_partners x12_isa01
+ALTER TABLE `x12_partners` ADD `x12_isa01` VARCHAR( 2 ) NOT NULL DEFAULT '00';
+#EndIf
+
+#IfMissingColumn x12_partners x12_isa01
+ALTER TABLE `x12_partners` ADD `x12_isa02` VARCHAR( 10 ) NOT NULL DEFAULT '          ';
+#EndIf
+
+#IfMissingColumn x12_partners x12_isa01
+ALTER TABLE `x12_partners` ADD `x12_isa03` VARCHAR( 2 ) NOT NULL DEFAULT '00';
+#EndIf
+
+#IfMissingColumn x12_partners x12_isa01
+ALTER TABLE `x12_partners` ADD `x12_isa04` VARCHAR( 10 ) NOT NULL DEFAULT '          ';
+#EndIf
