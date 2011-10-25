@@ -43,7 +43,7 @@ document.x12_partner.name.focus();
         <td COLSPAN="2" VALIGN="MIDDLE" ><input type="text" size="2" name="x12_isa01" value="{$partner->get_x12_isa01()}" onKeyDown="PreventIt(event)" /></td>
     </tr>
     <tr>
-        <td VALIGN="MIDDLE" >{xl t='User Logon (If Required) (ISA02)'}</td>
+        <td VALIGN="MIDDLE" >{xl t='User Logon (If 03 above, else leave spaces) (ISA02)'}</td>
         <td COLSPAN="2" VALIGN="MIDDLE" ><input type="text" size="20" name="x12_isa02" value="{$partner->get_x12_isa02()}" onKeyDown="PreventIt(event)" /></td>
     </tr>
     <tr>
@@ -51,7 +51,7 @@ document.x12_partner.name.focus();
         <td COLSPAN="2" VALIGN="MIDDLE" ><input type="text" size="2" name="x12_isa03" value="{$partner->get_x12_isa03()}" onKeyDown="PreventIt(event)" /></td>
     </tr>
     <tr>
-        <td VALIGN="MIDDLE" >{xl t='User Password (ISA04)'}</td>
+        <td VALIGN="MIDDLE" >{xl t='User Password (ISA04~ if 01 above, else leave spaces)'}</td>
         <td COLSPAN="2" VALIGN="MIDDLE" ><input type="text" size="20" name="x12_isa04" value="{$partner->get_x12_isa04()}" onKeyDown="PreventIt(event)" /></td>
     </tr>
         <td VALIGN="MIDDLE" >{xl t='Sender ID Qualifier (ISA05)'}</td>
@@ -86,7 +86,7 @@ document.x12_partner.name.focus();
         <td COLSPAN="2" VALIGN="MIDDLE" ><input type="text" size="20" name="x12_per06" value="{$partner->get_x12_per06()}" onKeyDown="PreventIt(event)" /></td>
     </tr>
     <tr>
-        <td VALIGN="MIDDLE" >{xl t='Version'}</td>
+        <td VALIGN="MIDDLE" >{xl t='Version. Use 005010X222 or 004010X098A1'}</td>
         <td COLSPAN="2" VALIGN="MIDDLE" ><input type="text" size="20" name="x12_version" value="{$partner->get_x12_version()}" onKeyDown="PreventIt(event)" /></td>
     </tr>
     <tr>
