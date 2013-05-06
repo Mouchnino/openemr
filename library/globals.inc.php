@@ -40,6 +40,7 @@
 //   Hungarian                      // xl('Hungarian')
 //   Italian                        // xl('Italian')
 //   Norwegian                      // xl('Norwegian')
+//   Persian                        // xl('Persian')
 //   Polish                         // xl('Polish')
 //   Portuguese (Brazilian)         // xl('Portuguese (Brazilian)')
 //   Portuguese (European)          // xl('Portuguese (European)')
@@ -294,7 +295,7 @@ $GLOBALS_METADATA = array(
     'allow_debug_language' => array(
       xl('Allow Debugging Language'),
       'bool',                           // data type
-      '1',                              // default = true during development and false for production releases
+      '0',                              // default = true during development and false for production releases
       xl('This will allow selection of the debugging (\'dummy\') language.')
     ),
 
@@ -436,7 +437,14 @@ $GLOBALS_METADATA = array(
       '$',                              // default
       xl('Code or symbol to indicate currency')
     ),
-
+    'age_display_format'=>array(xl('Age Display Format'),
+        array(
+            '0'=>xl('Years or months'),
+            '1'=>xl('Years, months and days')
+            ),
+            '0',
+            xl('Format for age display')
+    )
   ),
 
   // Features Tab
@@ -1367,6 +1375,13 @@ $GLOBALS_METADATA = array(
       xl('Enable Offsite Patient Portal.')
     ),
 
+    'portal_offsite_providerid' => array(
+      xl('Offsite Patient Portal Provider ID'),
+      'text',                           // data type
+      '',
+      xl('Offsite Patient Portal Provider ID(Put Blank If not Registered).')
+    ),    
+
     'portal_offsite_username' => array(
       xl('Offsite Patient Portal Username'),
       'text',                           // data type
@@ -1509,6 +1524,49 @@ $GLOBALS_METADATA = array(
         '',
         xl('Default Patient Country'),
     ),
+
+    'phimail_enable' => array(
+      xl('Enable phiMail Direct Messaging Service'),
+      'bool',                           // data type
+      '0',
+      xl('Enable phiMail Direct Messaging Service')
+    ),
+
+    'phimail_server_address' => array(
+      xl('phiMail Server Address'),
+      'text',                           // data type
+      'https://phimail.example.com:32541',
+      xl('Contact EMR Direct to subscribe to the phiMail Direct messaging service')
+    ),
+
+    'phimail_username' => array(
+      xl('phiMail Username'),
+      'text',                           // data type
+      '',
+      xl('Contact EMR Direct to subscribe to the phiMail Direct messaging service')
+    ),
+
+    'phimail_password' => array(
+      xl('phiMail Password'),
+      'pass',                           // data type
+      '',
+      xl('Contact EMR Direct to subscribe to the phiMail Direct messaging service')
+    ),
+
+    'phimail_notify' => array(
+      xl('phiMail notification user'),
+      'text',                           // data type
+      'admin',
+      xl('This user will receive notification of new incoming Direct messages')
+    ),
+
+    'phimail_interval' => array(
+      xl('phiMail Message Check Interval (minutes)'),
+      'num',                           // data type
+      '5',
+      xl('Interval between message checks (set to zero for manual checks only)')
+    )
+
   ),
   
   'Rx' => array(

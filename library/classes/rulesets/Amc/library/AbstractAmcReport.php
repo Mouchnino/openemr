@@ -157,10 +157,10 @@ abstract class AbstractAmcReport implements RsReportIF
                         "FROM `amc_misc_data`, `form_encounter` " .
                         "WHERE amc_misc_data.map_id = form_encounter.encounter " .
                         "AND amc_misc_data.map_category = 'form_encounter' " .
-                        "AND amc_misc_data.pid = form_encounter.pid = ? " .
+                        "AND amc_misc_data.pid = ? AND form_encounter.pid = ? " .
                         "AND amc_misc_data.amc_id = 'med_reconc_amc' " .
                         "AND form_encounter.date >= ? AND form_encounter.date <= ?";
-                array_push($sqlBindArray, $patient->id, $begin, $end);
+                array_push($sqlBindArray, $patient->id, $patient->id, $begin, $end);
                 break;
             case "transitions-out":
                 $sql = "SELECT * " .
@@ -185,16 +185,15 @@ abstract class AbstractAmcReport implements RsReportIF
                 array_push($sqlBindArray, $patient->id, $begin, $end);
                 break;
             case "labs":
-                $sql = "SELECT procedure_result.result " .
-                       "FROM `procedure_type`, " .
-                       "`procedure_order`, " .
-                       "`procedure_report`, " .
-                       "`procedure_result` " .
-                       "WHERE procedure_type.procedure_type_id = procedure_order.procedure_type_id " .
-                       "AND procedure_order.procedure_order_id = procedure_report.procedure_order_id " .
-                       "AND procedure_report.procedure_report_id = procedure_result.procedure_report_id " .
-                       "AND procedure_order.patient_id = ? " .
-                       "AND procedure_report.date_collected >= ? AND procedure_report.date_collected <= ?";
+                $sql = "SELECT procedure_result.result FROM " .
+                       "procedure_order, " .
+                       "procedure_report, " .
+                       "procedure_result " .
+                       "WHERE " .
+                       "procedure_order.patient_id = ? AND " .
+                       "procedure_order.procedure_order_id = procedure_report.procedure_order_id AND " .
+                       "procedure_report.procedure_report_id = procedure_result.procedure_report_id AND " .
+                       "procedure_report.date_collected >= ? AND procedure_report.date_collected <= ?";
                 array_push($sqlBindArray, $patient->id, $begin, $end);
                 break;
         }

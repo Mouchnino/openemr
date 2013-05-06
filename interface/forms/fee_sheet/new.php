@@ -80,7 +80,7 @@ function contraceptionClass($code_type, $code) {
 // This writes a billing line item to the output page.
 //
 function echoLine($lino, $codetype, $code, $modifier, $ndc_info='',
-  $auth = TRUE, $del = FALSE, $units = NULL, $fee = NULL, $id = NULL,
+  $auth = FALSE, $del = FALSE, $units = NULL, $fee = NULL, $id = NULL,
   $billed = FALSE, $code_text = NULL, $justify = NULL, $provider_id = 0, $notecodes='')
 {
   global $code_types, $ndc_applies, $ndc_uom_choices, $justinit, $pid;
@@ -408,12 +408,31 @@ $visit_row = sqlQuery("SELECT fe.date, opc.pc_catname " .
   "WHERE fe.pid = ? AND fe.encounter = ? LIMIT 1", array($pid,$encounter) );
 $visit_date = substr($visit_row['date'], 0, 10);
 
-// If Save or Save-and-Close was clicked, save the new and modified billing
-// lines; then if no error, redirect to $returnurl.
+// If Save was clicked, save the new and modified billing lines;
+// bn_save2 saves only travel and prepaid data;
+ if ($_POST['bn_save2']) {
+    $main_travel  = 0 + $_POST['TRAVEL'];
+   $main_prepaid  = 0 + $_POST['PREPAID'];
+   
+     
+     sqlStatement("UPDATE form_encounter SET c_prepaid = '$main_prepaid', c_travel = '$main_travel'  WHERE " .
+    "pid = '$pid' AND encounter = '$encounter'");
+    sqlStatement("UPDATE billing SET c_prepaid = '$main_prepaid', c_travel = '$main_travel'  WHERE " .
+    "pid = '$pid' AND encounter = '$encounter'");
+    
+    
+}
 //
 if ($_POST['bn_save'] || $_POST['bn_save_close']) {
   $main_provid = 0 + $_POST['ProviderID'];
   $main_supid  = 0 + $_POST['SupervisorID'];
+  
+   $main_counsid  = 0 + $_POST['CounselorID'];
+   $main_reviewid  = 0 + $_POST['ReviewerID'];
+   $main_reviewunits  = 0 + $_POST['REVIEWUNITS'];
+   $main_prepaid = 0 + $_POST['PREPAID'];
+   $main_travel = 0 + $_POST['TRAVEL'];
+ 
   if ($main_supid == $main_provid) $main_supid = 0;
   $default_warehouse = $_POST['default_warehouse'];
 
@@ -479,8 +498,8 @@ if ($_POST['bn_save'] || $_POST['bn_save_close']) {
     $justify   = trim($iter['justify']);
     $notecodes = trim($iter['notecodes']);
     if ($justify) $justify = str_replace(',', ':', $justify) . ':';
-    // $auth      = $iter['auth'] ? "1" : "0";
-    $auth      = "1";
+    $auth      = $iter['auth'] ? "1" : "0";
+    //$auth      = "0";
     $provid    = 0 + $iter['provid'];
 
     $ndc_info = '';
@@ -495,10 +514,50 @@ if ($_POST['bn_save'] || $_POST['bn_save_close']) {
         deleteBilling($id);
       }
       else {
+
+	$tmp2 = sqlQuery("SELECT rate_one,rate_two,rate_three,c_super FROM users " .
+  "WHERE id = '$main_counsid' " .
+  "ORDER BY id DESC LIMIT 1");
+$c_rate1 = 0 + $tmp2['rate_one'];
+$c_rate2  = 0 + $tmp2['rate_two'];
+$c_rate3  = 0 + $tmp2['rate_three'];
+$c_super = $tmp2['c_super'];
+
+ 
+ $payum=$c_rate1;
+ if ($code=="H0031"&&$modifier=="HA"){$payum=$c_rate2;} 
+  if ($code=="H2000"&&$modifier=="HO"){$payum=$c_rate2;} 
+  if ($code=="H2000"&&$modifier=="HP"){$payum=$c_rate2;}
+   if ($code=="H0032"&&$modifier=="TS"){$payum=($c_rate1*4);} 
+    if ($code=="H0031"&&$modifier=="HN"){$payum=($c_rate1*4);}
+     if ($code=="H0032"&&$modifier==""){$payum=($c_rate1*8);}
+      if ($code=="H0031"&&$modifier=="HO"){$payum=($c_rate1*8);}
+       if ($code=="H2019"&&$modifier=="HQ"){$payum=$c_rate1*.35;}
+       if ($code=="T1017"){$payum=$c_rate2;}
+       
+ if ($code=="90806"){$payum=$c_rate1*4;}
+  if ($code=="90846"){$payum=$c_rate1*4;}
+   if ($code=="90847"){$payum=$c_rate1*4;}
+    if ($code=="90801"){$payum=$c_rate1*5;}
+     if ($code=="90808"){$payum=$c_rate1*6;}
+     
+ if ($code=="000001"){$payum=$c_rate1*24;}
+  if ($code=="000002"){$payum=$c_rate1*24;}
+   if ($code=="000003"){$payum=$c_rate1*40;}
+   if ($code=="000004"){$payum=$c_rate1*20;}
+    if ($code=="000005"){$payum=$c_rate1*12;}
+   if ($code_type == 'ICD9') {$payum=0;}
+    $c_pay=($units * $payum);
+    
+    
+
         // authorizeBilling($id, $auth);
         sqlQuery("UPDATE billing SET code = ?, " .
           "units = ?, fee = ?, modifier = ?, " .
           "authorized = ?, provider_id = ?, " .
+          "counselor_id='$main_counsid', reviewer_id='$main_reviewid',".
+          "review_units='$main_reviewunits', c_pay= '$c_pay', c_travel= '$main_travel',".
+          "c_prepaid='$main_prepaid',c_super='$c_super',".      
           "ndc_info = ?, justify = ?, notecodes = ? " .
           "WHERE " .
           "id = ? AND billed = 0 AND activity = 1", array($code,$units,$fee,$modifier,$auth,$provid,$ndc_info,$justify,$notecodes,$id) );
@@ -577,8 +636,10 @@ if ($_POST['bn_save'] || $_POST['bn_save_close']) {
     "forms.formdir = 'newpatient' AND users.id = '$provid'");
   *******************************************************************/
   sqlStatement("UPDATE form_encounter SET provider_id = ?, " .
-    "supervisor_id = ?  WHERE " .
-    "pid = ? AND encounter = ?", array($main_provid,$main_supid,$pid,$encounter) );
+    "supervisor_id = ?,c_super = '$c_super',c_prepaid = '$main_prepaid',".
+          "c_travel='$main_travel', reviewer_id = '$main_reviewid', c_pay='$c_pay',".
+          "review_units='$main_reviewunits', counselor_id = '$main_counsid'".
+    " WHERE pid = ? AND encounter = ?", array($main_provid,$main_supid,$pid,$encounter) );
 
   // Save-and-Close is currently IPPF-specific but might be more generally
   // useful.  It provides the ability to mark an encounter as billed
@@ -860,7 +921,7 @@ echo "  <td colspan='" . attr($FEE_SHEET_COLUMNS) . "' align='center' nowrap>\n"
 //
 $numrows = 0;
 if ($_POST['bn_search'] && $_POST['search_term']) {
-  $res = code_set_search($search_type,$_POST['search_term']);
+  $res = main_code_set_search($search_type,$_POST['search_term']);
   if (!empty($res)) {
     $numrows = sqlNumRows($res);
   }
@@ -897,14 +958,27 @@ echo " </tr>\n";
   </td>
   <td>
    <?php echo xlt('Search'); ?>&nbsp;
+  </td>
+  <td>
 <?php
+  $nofs_code_types = array();
   foreach ($code_types as $key => $value) {
     if (!empty($value['nofs'])) continue;
-    echo "   <input type='radio' name='search_type' value='" . attr($key) . "'";
-    if ($key == $default_search_type) echo " checked";
-    echo " />" . text($key) . "&nbsp;\n";
+    $nofs_code_types[$key] = $value;
+  }
+  $size_select = (count($nofs_code_types) < 5) ? count($nofs_code_types) : 5;
+?>
+  <select name='search_type' size='<?php echo attr($size_select) ?>'>
+<?php
+  foreach ($nofs_code_types as $key => $value) {
+    echo "   <option value='" . attr($key) . "'";
+    if ($key == $default_search_type) echo " selected";
+    echo " />" . xlt($value['label']) . "</option>";
   }
 ?>
+  </select>
+  </td>
+  <td>
    <?php echo xlt('for'); ?>&nbsp;
   </td>
   <td>
@@ -1121,30 +1195,99 @@ if ($_POST['newcodes']) {
   }
 }
 
-$tmp = sqlQuery("SELECT provider_id, supervisor_id FROM form_encounter " .
+$tmp = sqlQuery("SELECT provider_id, supervisor_id, counselor_id,reviewer_id,review_units, c_prepaid ,c_travel FROM form_encounter " .
   "WHERE pid = ? AND encounter = ? " .
   "ORDER BY id DESC LIMIT 1", array($pid,$encounter) );
 $encounter_provid = 0 + $tmp['provider_id'];
 $encounter_supid  = 0 + $tmp['supervisor_id'];
+$encounter_counsid  = 0 + $tmp['counselor_id'];
+$encounter_reviewid  = 0 + $tmp['reviewer_id'];
+$encounter_reviewunits = 0 + $tmp['review_units'];
+$encounter_prepaid  = 0 + $tmp['c_prepaid'];
+$encounter_travel  = 0 + $tmp['c_travel'];
 ?>
 </table>
 </p>
-
 <br />
 &nbsp;
 
+
+
 <?php
-// Choose rendering and supervising providers.
+echo xl('All CBHAs: Bill Under Your Own Name.') . "\n";
+?>
+<br />
+
+<?php
+echo xl('All Counseling:  Both "Provider" and "Billed Under" is the treating provider (signator of last treatment plan).  "Clinician" is your own name.<br>In-Depth Assessments, Bio-Psychosocials and ALL Treatment Plans all billed as 1 unit.') . "\n";?>
+
+<br />
+
+
+<br />
+
+<?php
+// Choose rendering and counselor providers.
 echo "<span class='billcell'><b>\n";
-echo xlt('Providers') . ": &nbsp;";
 
-echo "&nbsp;&nbsp;" . xlt('Rendering') . "\n";
-genProviderSelect('ProviderID', '-- '.xl("Please Select").' --', $encounter_provid, $isBilled);
 
-if (!$GLOBALS['ippf_specific']) {
-  echo "&nbsp;&nbsp;" . xlt('Supervising') . "\n";
-  genProviderSelect('SupervisorID', '-- '.xl("N/A").' --', $encounter_supid, $isBilled);
+echo "&nbsp;&nbsp;" . xl('Billed Under:') . "\n";
+genProviderSelect('ProviderID', '-- Please Select --', $encounter_provid, $isBilled);
+
+
+
+////////Arts code attempt
+echo "&nbsp;&nbsp;" . xl('Clinician') . "\n";
+genProviderSelect('CounselorID', '-- Please Select --', $encounter_counsid, $isBilled);
+/////////////////////////Reviewerpay/////////////////////////////////////
+
+echo "&nbsp;&nbsp;" . xl('CBHA Reviewer') . "\n";
+genProviderSelect('ReviewerID', '-- Please Select --', $encounter_reviewid, $isBilled);
+
+ echo "&nbsp;&nbsp;";
+echo "<p>CBHA Reviewer Units<br>";
+echo "<select name='REVIEWUNITS'>";
+echo "<option selected>".$encounter_reviewunits;
+echo "<option value='0'>0</option>";
+echo "<option value='1'>1</option>";
+echo "<option value='2'>2</option>";
+echo "<option value='3'>3</option>";
+echo "<option value='4'>4</option>";
+echo "<option value='5'>5</option>";
+echo "<option value='6'>6</option>";
+echo "<option value='7'>7</option>";
+echo "<option value='8'>8</option>";
+echo "<option value='9'>9</option>";
+echo "<option value='10>10</option>";
+echo "<option value='11>11</option>";
+echo "<option value='12'>12</option>";
+echo "<option value='13'>13</option>";
+echo "<option value='14'>14</option>";
+echo "<option value='15'>15</option>";
+echo "<option value='16'>16</option>";
+echo "</select>";
+echo "</p>";
+
+
+if (acl_check('admin', 'super')){
+ echo "<p>Pre-payed?<br>";
+echo "<select name='PREPAID'>";
+echo "<option selected>".$encounter_prepaid;
+echo "<option value='0'>Unpaid</option>";
+echo "<option value='1'>PAID!!</option>";
+echo "</select>";
+ //echo "&nbsp;&nbsp;";
 }
+echo "<p>CBHA Travel<br>";
+echo "<select name='TRAVEL'>";
+echo "<option selected>".$encounter_travel;
+echo "<option value='0'>No Travel</option>";
+echo "<option value='1'>Short Travel</option>";
+echo "<option value='2'>Long Travel</option>";
+echo "</select>";
+echo "</p>";
+
+
 
 echo "</b></span>\n";
 ?>
@@ -1215,7 +1358,6 @@ if (true) {
 }
 ?>
 
-&nbsp; &nbsp; &nbsp;
 
 <?php if (!$isBilled) { ?>
 <input type='submit' name='bn_save' value='<?php echo xla('Save');?>' />
@@ -1226,16 +1368,17 @@ if (true) {
 <?php } ?>
 <input type='submit' name='bn_refresh' value='<?php echo xla('Refresh');?>'>
 &nbsp;
+<input type='button' value='<?php xl('Cancel','e');?>'
+ onclick="top.restoreSession();location='<?php echo "$rootdir/patient_file/encounter/$returnurl" ?>'" />
 <?php } ?>
-
+<?php if ($isBilled&&acl_check('admin', 'super')) { echo "WARNING!  Only update PAID EARLY or CBHA TRAVEL status without re-opening!!!"?>
+<input type='submit' name='bn_save2' value='<?php xl('Save','e');?>' />
+&nbsp;
+<input type='submit' name='bn_refresh' value='<?php xl('Refresh','e');?>'>
+&nbsp;
 <input type='button' value='<?php echo xla('Cancel');?>'
  onclick="top.restoreSession();location='<?php echo "$rootdir/patient_file/encounter/$returnurl" ?>'" />
 
-<?php if ($code_types['UCSMC']) { ?>
-<p style='font-family:sans-serif;font-size:8pt;color:#666666;'>
-&nbsp;<br>
-<?php echo xlt('UCSMC codes provided by the University of Calgary Sports Medicine Centre');?>
-</p>
 <?php } ?>
 
 </center>
@@ -1249,6 +1392,6 @@ if (true) {
 <script language='JavaScript'>
 <?php echo $justinit; ?>
 </script>
-
 </body>
 </html>
+<?php require_once("review/initialize_review.php"); ?>

@@ -39,6 +39,8 @@ $ignoreAuth=true;
 ob_start();
 
 require_once("../../interface/globals.php");
+require_once(dirname(__FILE__)."/../../controllers/C_Document.class.php");
+require_once(dirname(__FILE__)."/../../library/options.inc.php");
 $err = '';
 if(!extension_loaded("soap")){
   dl("php_soap.dll");
@@ -47,6 +49,219 @@ require_once("server_med_rec.php");
 require_once("factory_class.php");
 class UserService extends Userforms
 {
+
+/**  
+* To display the patient uploaded files/pdf patient wise
+*/
+  public function patientuploadedfiles($data){
+    if($this->valid($data[0])){
+      ob_start();
+      $query   = "
+        SELECT
+          am.id,
+          am.pid,
+          ad.field_value AS doc_name,
+          pd.fname,
+          pd.lname,
+          pd.mname,
+          ad2.field_value AS file_name,
+          ad3.field_value AS pat_comments
+        FROM
+          audit_details AS ad 
+          JOIN audit_master AS am 
+            ON am.id = ad.audit_master_id 
+          LEFT JOIN patient_data AS pd 
+            ON am.pid = pd.pid
+          JOIN audit_details AS ad2 
+            ON am.id = ad2.audit_master_id
+            AND ad2.field_name = 'dlm_filename'
+          JOIN audit_details AS ad3 
+            ON am.id = ad3.audit_master_id
+            AND ad3.field_name = 'dld_patient_comments'                                                
+        WHERE ad.field_name = 'dlm_document_name'   
+          AND approval_status = '1' 
+          AND am.type = '4'
+          ORDER BY am.pid ASC
+      ";        
+      if(!empty($data[1])){
+        $query .= " AND am.id = ?";
+        $res = sqlStatement($query,array($data[1]));
+      }else{
+        $res = sqlStatement($query);
+      }		  
+      if ($res) {
+        for($iter=0; $row=sqlFetchArray($res); $iter++) {
+          $all[$iter] = $row;
+        }
+      }
+      $v = ob_get_clean();
+      return $all;
+    }
+  }  
+    
+  public function createandstoretodirectory($data){
+    global $pid;
+    if($this->valid($data[0])){
+      $file_name=$data[1];
+      $data=$data[2];
+      $savedpath=$GLOBALS['OE_SITE_DIR']."/documents/myportal/patientuploads/".$pid;
+      if(is_dir($savedpath));
+      else
+      {
+        mkdir($savedpath,0777,true);
+        chmod($savedpath, 0777);
+      }
+      $handler = fopen($savedpath."/".$file_name,"w");
+      fwrite($handler, base64_decode($data));
+      fclose($handler);
+      chmod($savedpath."/".$file_name,0777);
+    }
+    else{
+      throw new SoapFault("Server", "credentials failed");
+    }    
+  }
+  
+/**  
+* To move category,rename filename,input note and to move to new patient#
+*/
+  public function documents_update($data){
+    if($this->valid($data[0])){
+      $_POST['process'] = true;
+      $_POST['new_category_id'] = $data[1];
+      $_POST['new_patient_id']  = $data[4];
+      $file_path = '';
+      if($data[9] == 2)
+	$file_path = $GLOBALS['OE_SITE_DIR']."/documents/myportal/unsigned/".$data[6];
+      elseif($data[9] == 1)
+	$file_path = $GLOBALS['OE_SITE_DIR']."/documents/myportal/signed/".$data[6];
+      elseif($data[9] == 4)
+	$file_path = $GLOBALS['OE_SITE_DIR']."/documents/myportal/patientuploads/".$data[5]."/".$data[6];        
+      $mime_types = array(
+	      "pdf"=>"application/pdf"
+	      ,"exe"=>"application/octet-stream"
+	      ,"zip"=>"application/zip"
+	      ,"docx"=>"application/msword"
+	      ,"doc"=>"application/msword"
+	      ,"xls"=>"application/vnd.ms-excel"
+	      ,"ppt"=>"application/vnd.ms-powerpoint"
+	      ,"gif"=>"image/gif"
+	      ,"png"=>"image/png"
+	      ,"jpeg"=>"image/jpg"
+	      ,"jpg"=>"image/jpg"
+	      ,"mp3"=>"audio/mpeg"
+	      ,"wav"=>"audio/x-wav"
+	      ,"mpeg"=>"video/mpeg"
+	      ,"mpg"=>"video/mpeg"
+	      ,"mpe"=>"video/mpeg"
+	      ,"mov"=>"video/quicktime"
+	      ,"avi"=>"video/x-msvideo"
+	      ,"3gp"=>"video/3gpp"
+	      ,"css"=>"text/css"
+	      ,"jsc"=>"application/javascript"
+	      ,"js"=>"application/javascript"
+	      ,"php"=>"text/html"
+	      ,"htm"=>"text/html"
+	      ,"html"=>"text/html"
+      );
+  
+      $extension = strtolower(end(explode('.',$file_path)));
+      $mime_types = $mime_types[$extension];
+      $_FILES['file']['name'][0]     = $data[6];
+      $_FILES['file']['type'][0]     = $mime_types;
+      $_FILES['file']['tmp_name'][0] = $file_path;
+      $_FILES['file']['error'][0]    = 0;
+      $_FILES['file']['size'][0]     = filesize($file_path);
+      $_POST['category_id']          = $_POST['new_category_id'];
+      $_POST['patient_id']           = $_POST['new_patient_id'];
+      $_GET['patient_id']            = $_POST['patient_id'];
+      $_POST['destination']          = $data[3];
+
+      $cdoc = new C_Document();      
+      $cdoc->upload_action_process();
+      if($GLOBALS['document_storage_method']==0){
+	if($data[3])
+	  copy($file_path,$cdoc->file_path.$data[3]);
+	else
+	  copy($file_path,$cdoc->file_path.$data[6]);
+      }
+      $foreign_id = sqlQuery("select id from documents where foreign_id = ? order by id desc limit 1",array($_POST['new_patient_id']));
+      unset($_POST);
+      $_POST['encrypted']  = '';
+      $_POST['passphrase'] = '';
+      $_POST['process']    = true;
+      $_POST['foreign_id'] = $foreign_id['id'];
+      $_POST['note']       = $data[7];
+      $cdoc->note_action_process($_GET['patient_id']);
+      $sql_patient_no = "UPDATE documents_legal_detail SET dld_moved = '1' WHERE dld_master_docid = ? AND dld_id = ?";
+      sqlQuery($sql_patient_no,array($data[2],$data[8]));
+      unset($_POST);      
+    }
+  }  
+ 
+/** 
+* To display the files/pdfforms patient wise
+*/
+  public function userslistportal($data){
+    if($this->valid($data[0])){
+      ob_start();
+      $query   = "SELECT
+                    dlm.dlm_upload_type,
+                    dld.dld_id,
+                    dld.dld_pid,
+                    dlm.dlm_document_name,
+                    dlm.dlm_document_id,
+                    dlm.dlm_filename,
+                    dld.dld_filename,
+                    dld.dld_signed,
+                    dlm.dlm_filename,
+                    dld.dld_master_docid,
+                    dld.dld_signed,
+                    dld.dld_patient_comments,
+                    dld.dld_moved,  
+                    pd.fname,
+                    pd.lname,
+                    pd.mname
+                  FROM
+                    documents_legal_master AS dlm 
+                    LEFT OUTER JOIN documents_legal_detail AS dld 
+                      ON dlm.dlm_document_id = dld_master_docid 
+                    JOIN patient_data AS pd 
+                      ON dld.dld_pid = pd.pid 
+                  WHERE dlm.dlm_effective_date <= NOW() 
+                    AND dlm.dlm_effective_date <> '0000-00-00 00:00:00' 
+                    AND dld.dld_id IS NOT NULL 
+                    AND dld.dld_signed IN (1,2,4) 
+                    AND dld.dld_moved = 0 
+                  ORDER BY dld.dld_pid ASC ";
+		  
+      $res = sqlStatement($query);
+      if ($res) {
+	for($iter=0; $row=sqlFetchArray($res); $iter++) {
+	    $all[$iter] = $row;
+	}
+      } 
+      $v = ob_get_clean();
+      return $all;
+    }
+  }
+
+/**  
+* To display the category list in Move To Category option
+*/
+  public function category_list($data){
+    if($this->valid($data[0])){
+      ob_start();
+	$query = "SELECT * FROM categories";
+	$res = sqlStatement($query);
+      if ($res) {
+	for($iter=0; $row=sqlFetchArray($res); $iter++) {
+	    $all[$iter] = $row;
+	}
+      }       
+      $v = ob_get_clean();
+      return $all;
+    }
+  }   
     
 //Converts a text to xml format.Format is as follows
   public function text_to_xml($data){
@@ -310,7 +525,14 @@ static  public function batch_despatch($var,$func,$data_credentials){
 		$x['ok']='ok';
 		return UserService::function_return_to_xml($x);
 	 }
-	
+	elseif($func=='generate_layout_validation')
+	 {
+		$form_id=$var['form_id'];
+		ob_start();
+		generate_layout_validation($form_id);
+		$x = ob_get_clean();
+		return $x;
+	}
 	}
 	else{
 		throw new SoapFault("Server", "credentials failed");
@@ -341,7 +563,7 @@ static  public function batch_despatch($var,$func,$data_credentials){
 
   public function update_password($var){
 	      $data_credentials=$var[0];
-	      global $pid;
+	      global $pid,$auditmasterid;
        if(UserService::valid($data_credentials)=='existingpatient' || UserService::valid($data_credentials)=='newpatient'){
 	       $status = $var['new_pwd_status'];
 	       $pwd=$var['new_pwd'];
@@ -378,8 +600,21 @@ static  public function batch_despatch($var,$func,$data_credentials){
 			 {
 			   return 'notok';
 			 }
-       }
-       else{
+       }elseif(UserService::valid($data_credentials) == 'newpatienttoapprove'){
+				 $pwd=$var['new_pwd'];
+	       $oldpwd = $var['old_pwd'];
+	       $qry = "SELECT * from audit_details WHERE audit_master_id = ? AND table_name = 'patient_access_offsite' AND field_name = 'portal_pwd' AND field_value = ?";
+	       $res=sqlStatement($qry,array($auditmasterid,$oldpwd));
+				 if(sqlNumRows($res)>0){
+					$qry = "UPDATE audit_details SET field_value = ? WHERE audit_master_id = ? AND table_name = 'patient_access_offsite' AND field_name = 'portal_pwd'";
+					sqlStatement($qry,array($pwd,$auditmasterid));
+					return 'ok';
+				 }
+				 else
+				 {
+					 return 'notok';
+				 }
+			 }else{
 	       throw new SoapFault("Server", "credentials failed");
        }
     }
@@ -430,8 +665,55 @@ static  public function batch_despatch($var,$func,$data_credentials){
 
   public function update_dld_approve_deny($data){
       if($this->valid($data[0])){
+				if(substr($data[1][2],0,3) == 'am-'){
+					$audid = substr($data[1][2],3);
+					$status = sqlQuery("SELECT 
+						am2.approval_status,
+						ad.field_value AS uname,
+						CONCAT(ad4.field_value,' ',ad5.field_value,' ',ad6.field_value) AS name
+					FROM
+						audit_master am 
+						JOIN audit_details ad 
+							ON ad.audit_master_id = am.id 
+							AND ad.table_name = 'patient_access_offsite' 
+							AND ad.field_name = 'portal_username' 
+						JOIN audit_details ad2 
+							ON ad2.table_name = 'patient_access_offsite' 
+							AND ad2.field_name = 'portal_username' 
+							AND ad2.field_value = ad.field_value 
+						JOIN audit_details ad3 
+							ON ad3.table_name = 'patient_access_offsite' 
+							AND ad3.field_name = 'portal_pwd' 
+							AND ad3.audit_master_id = ad2.audit_master_id 
+						JOIN audit_details ad4 
+							ON ad4.table_name = 'patient_data' 
+							AND ad4.field_name = 'fname' 
+							AND ad4.audit_master_id = ad2.audit_master_id 
+						JOIN audit_details ad5 
+							ON ad5.table_name = 'patient_data' 
+							AND ad5.field_name = 'mname' 
+							AND ad5.audit_master_id = ad2.audit_master_id 
+						JOIN audit_details ad6 
+							ON ad6.table_name = 'patient_data' 
+							AND ad6.field_name = 'lname' 
+							AND ad6.audit_master_id = ad2.audit_master_id 
+						JOIN audit_master am2 
+							ON am2.id = ad3.audit_master_id 
+							AND am2.type = 1 
+					WHERE am.id = ?",array($audid));
+					if($status['approval_status'] == '2'){
+						$result = UserService::update_audited_data(array($data[0],'audit_master_id' => $audid));
+						UserService::update_audit_master(array($data[0],'audit_master_id' => $audid,'approval_status' => '2'));
+						$pid = sqlQuery("SELECT pid FROM patient_access_offsite WHERE portal_username=?",array($status['uname']));
+						$qry = "UPDATE documents_legal_detail SET dld_pid=?,dld_signed=?,dld_denial_reason=? WHERE dld_id=?";
+						sqlStatement($qry,array($pid['pid'],$data[1][0],$data[1][1],$result['dld_id']));
+					}else{
+						return "Please approve the patient ".$status['name'].", for approving the selected document";
+					}
+				}else{
 	$qry = "UPDATE documents_legal_detail SET dld_signed=?,dld_denial_reason=? WHERE dld_id=?";
 	sqlStatement($qry,$data[1]);
+				}
       }
       else{
 	throw new SoapFault("Server", "credentials failed");
@@ -465,11 +747,21 @@ static  public function batch_despatch($var,$func,$data_credentials){
   
 
   public function insert_dld($data){
-       global $pid;
+       global $pid,$auditmasterid;
        if(UserService::valid($data[0])=='existingpatient' || UserService::valid($data[0])=='newpatient'){
 	       sqlInsert("INSERT INTO documents_legal_detail (dld_pid,dld_signed,dld_filepath,dld_master_docid,dld_filename,dld_encounter,dld_file_for_pdf_generation) ".
 	       " VALUES (?,?,?,?,?,?,?)",array($pid,$data[2],$data[3],$data[4],$data[5],$data[6],$data[7]));
        }
+			 elseif(UserService::valid($data[0])=='newpatienttoapprove'){
+				 $param=array($data[0],'audit_master_id_to_delete'=>"",'pid'=>"$pid",'approval_status'=>'1',
+					 'type'=>'3','ip_address'=>'',
+					 'table_name_array'=>array('documents_legal_detail','patient_access_offsite'),
+				 	 'field_name_value_array'=>array(array('dld_pid'=>"$pid",'dld_signed'=>$data[2],'dld_filepath'=>$data[3],'dld_master_docid'=>$data[4],'dld_filename'=>$data[5],'dld_encounter'=>$data[6],'dld_file_for_pdf_generation'=>$data[7]),
+					 array('pid'=>"$pid",'portal_username'=>$data[0][6])),
+				 	 'entry_identification_array'=>array(1,1),
+				 );
+				 UserService::insert_to_be_audit_data($param);
+			 }
        else{
 	       throw new SoapFault("Server", "credentials failed");
        }
@@ -559,16 +851,35 @@ static  public function batch_despatch($var,$func,$data_credentials){
 
 
   public function getversion($data){
-         return '1.1';
+         return '1.4';
     }
     
     
   public function loginchecking($data){
       if($this->valid($data[0])=='existingpatient' || $this->valid($data[0])=='newpatient'){
-	$res = sqlStatement("SELECT portal_pwd_status FROM patient_access_offsite WHERE BINARY portal_username=? AND  BINARY portal_pwd=?",$data[1]);
-	return $this->resourcetoxml($res);
-      }
-      
+				$res = sqlStatement("SELECT portal_pwd_status, 'yes' AS patient_status FROM patient_access_offsite WHERE BINARY portal_username=? AND  BINARY portal_pwd=?",$data[1]);
+				return $this->resourcetoxml($res);
+      }elseif($this->valid($data[0])=='newpatienttoapprove'){
+				$res = sqlStatement("
+					SELECT 
+						COUNT(*) AS portal_pwd_status,
+						'no' AS patient_status 
+					FROM
+						audit_master am 
+						JOIN audit_details ad 
+							ON ad.audit_master_id = am.id 
+							AND ad.table_name = 'patient_access_offsite' 
+							AND ad.field_name = 'portal_username' 
+						JOIN audit_details ad2 
+							ON ad2.audit_master_id = am.id 
+							AND ad2.table_name = 'patient_access_offsite' 
+							AND ad2.field_name = 'portal_pwd' 
+					WHERE am.approval_status = 1 
+						AND ad.field_value = ?
+						AND ad2.field_value = ?;
+				",$data[1]);
+				return $this->resourcetoxml($res);
+			}
       return false;
     }
     
@@ -579,10 +890,13 @@ static  public function batch_despatch($var,$func,$data_credentials){
       $sql_result_set='';
       $utype = $this->valid($data[0]);
       if($utype){
-      $newobj = factoryclass::dynamic_class_factory($utype);
-      $sql_result_setarr = $newobj->query_formation($data[1]);
-      $sql_result_set = sqlStatement($sql_result_setarr[0],$sql_result_setarr[1]);
-      return $this->resourcetoxml($sql_result_set);
+				$newobj = factoryclass::dynamic_class_factory($utype);
+				$sql_result_setarr = $newobj->query_formation($data[1]);
+				if(!empty($sql_result_setarr[1]) && $sql_result_setarr[1] == 'result'){
+					return $this->resourcetoxml2($sql_result_setarr[0]);
+				}
+				$sql_result_set = sqlStatement($sql_result_setarr[0],$sql_result_setarr[1]);
+				return $this->resourcetoxml($sql_result_set);
       }
     }
        
@@ -609,6 +923,23 @@ static  public function batch_despatch($var,$func,$data_credentials){
 	 }
 	 return $doc->saveXML();
     }
+		
+	public function resourcetoxml2($row){
+		$doc = new DOMDocument();
+		$doc->formatOutput = true;
+		$root = $doc->createElement( "root" );
+		$doc->appendChild( $root );
+		$level = $doc->createElement( "level" );
+		$root->appendChild( $level );
+		foreach($row as $key=>$value){
+			$element = $doc->createElement( "$key" );
+			$element->appendChild(
+				$doc->createTextNode( $value )
+			);
+			$level->appendChild( $element );
+		}
+		return $doc->saveXML();
+	}
 	
   //Writing facility payment configuration to table
   public function save_payment_configuration($var){
@@ -688,9 +1019,12 @@ static  public function batch_despatch($var,$func,$data_credentials){
 	if(($credentials[1]==$GLOBALS['portal_offsite_username'] && $ok==1 && $GLOBALS['portal_offsite_enable']==1)||$GLOBALS['validated_offsite_portal']==true){
 	  $prow = sqlQuery("SELECT * FROM patient_access_offsite WHERE portal_username=?",array($credentials[6]));
 		if($credentials[4] == 'existingpatient'){
-		  if(UserService::validcredential($credentials)){
-		    $okE = 1;
+		  if(UserService::validcredential($credentials) === 2){
+		    $okE = 2;
 		  }
+			elseif(UserService::validcredential($credentials) == true){
+				$okE = 1;
+			}
 		  else{
 		    return false;
 		  }
@@ -701,7 +1035,10 @@ static  public function batch_despatch($var,$func,$data_credentials){
 		  $okO = 1;
 		}
 		elseif($credentials[4] == 'newpatient'){
-		  if(UserService::validcredential($credentials)){
+		  if(UserService::validcredential($credentials) === 2){
+		    $okN = 3;
+		  }
+			elseif(UserService::validcredential($credentials)){
 		    $okN = 2;
 		  }
 		  else{
@@ -712,10 +1049,43 @@ static  public function batch_despatch($var,$func,$data_credentials){
 		if($okE==1 || $okN == 2 || $okN == 1 || $okO == 1){
 		  $pid = $prow['pid'];
 		  $GLOBALS['pid'] = $prow['pid'];
+		}elseif($okE == 2 || $okN == 3){
+			$arow = sqlQuery("
+				SELECT 
+					ad.audit_master_id 
+				FROM
+					audit_details ad 
+					JOIN audit_details ad2 
+						ON ad2.audit_master_id = ad.audit_master_id 
+						AND ad2.table_name = 'patient_access_offsite' 
+						AND ad2.field_name = 'portal_pwd' 
+				WHERE ad.table_name = 'patient_access_offsite' 
+					AND ad.field_name = 'portal_username' 
+					AND ad.field_value = ?
+			",array($credentials[6]));
+			$auditmasterid = $arow['audit_master_id'];
+		  $GLOBALS['auditmasterid'] = $arow['audit_master_id'];
+			$pid = 0;
+		  $GLOBALS['pid'] = 0;
 		}
 		$_GET['site'] = $credentials[0];
-		if($okE==1){
-		  $portal = sqlQuery("SELECT allow_patient_portal FROM patient_data WHERE pid=?",array($pid));
+		if($okE){
+			if($okE == 1){
+				$portal = sqlQuery("SELECT allow_patient_portal FROM patient_data WHERE pid=?",array($pid));
+			}elseif($okE == 2){
+				$portal = sqlQuery("
+					SELECT 
+						IF(COUNT(*),'yes','no') AS allow_patient_portal
+					FROM
+						audit_master am 
+						JOIN audit_details ad 
+							ON ad.audit_master_id = am.id 
+							AND ad.table_name = 'patient_access_offsite' 
+							AND ad.field_name = 'portal_username' 
+					WHERE am.approval_status = 1 
+						AND ad.field_value = ?
+				",array($credentials[6]));
+			}
 		  if(strtolower($portal['allow_patient_portal'])!='yes')
 		  return false;
 		}
@@ -723,11 +1093,17 @@ static  public function batch_despatch($var,$func,$data_credentials){
 		if($okO){
 		  return 'oemruser';
 		}
-		elseif($okE){
+		elseif($okE == 1){
 		  return 'existingpatient';
 		}
-		elseif($okN){
+		elseif($okE == 2){
+		  return 'newpatienttoapprove';
+		}
+		elseif($okN == 1 || $okN == 2){
 		  return 'newpatient';
+		}
+		elseif($okN == 3){
+		  return 'newpatienttoapprove';
 		}
 		return false;
 	}
@@ -740,21 +1116,53 @@ static  public function batch_despatch($var,$func,$data_credentials){
     
 
   public function validcredential($credentials){
-      $tim = strtotime(gmdate("Y-m-d H:m"));
-      if($credentials[6]){
-      $prow = sqlQuery("SELECT * FROM patient_access_offsite WHERE portal_username=?",array($credentials[6]));
-      	if(sha1($prow['portal_pwd'].date("Y-m-d H",$tim).$credentials[8])==$credentials[7]){
-	  return true;
-	}
-	elseif(sha1($prow['portal_pwd'].date("Y-m-d H",($tim-3600)).$credentials[8])==$credentials[7]){
-	  return true;
-	}
-	elseif(sha1($prow['portal_pwd'].date("Y-m-d H",($tim+3600)).$credentials[8])==$credentials[7]){
-	  return true;
-	}
-      }
-	return false;
+		$tim = strtotime(gmdate("Y-m-d H:m"));
+		if($credentials[6]){
+			$prow = sqlQuery("SELECT * FROM patient_access_offsite WHERE portal_username=?",array($credentials[6]));
+			$newpatient_to_approve = 0;
+			if(!$prow['portal_pwd']){
+				$newpatient_to_approve = 1;
+				$prow = sqlQuery("
+					SELECT 
+						ad2.field_value AS portal_pwd
+					FROM
+						audit_master am 
+						JOIN audit_details ad 
+							ON ad.audit_master_id = am.id 
+							AND ad.table_name = 'patient_access_offsite' 
+							AND ad.field_name = 'portal_username' 
+						JOIN audit_details ad2 
+							ON ad2.audit_master_id = am.id 
+							AND ad2.table_name = 'patient_access_offsite' 
+							AND ad2.field_name = 'portal_pwd' 
+					WHERE am.approval_status = 1 
+						AND ad.field_value = ?
+				",array($credentials[6]));
+			}
+			if(sha1($prow['portal_pwd'].date("Y-m-d H",$tim).$credentials[8])==$credentials[7]){
+				if($newpatient_to_approve){
+					return 2;
+				}else{
+					return true;
+				}
+			}
+			elseif(sha1($prow['portal_pwd'].date("Y-m-d H",($tim-3600)).$credentials[8])==$credentials[7]){
+				if($newpatient_to_approve){
+					return 2;
+				}else{
+					return true;
+				}
+			}
+			elseif(sha1($prow['portal_pwd'].date("Y-m-d H",($tim+3600)).$credentials[8])==$credentials[7]){
+				if($newpatient_to_approve){
+					return 2;
+				}else{
+					return true;
+				}
+			}
     }
+		return false;
+  }
     
        
     //for checking the connection

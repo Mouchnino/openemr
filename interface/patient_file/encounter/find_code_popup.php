@@ -64,7 +64,7 @@ td { font-size:10pt; }
 
 </head>
 
-<body class="body_top">
+<body class="body_top" OnLoad="document.theform.search_term.focus();">
 
 <?php
 $string_target_element = "";
@@ -159,7 +159,7 @@ else {
  </tr>
 <?php
   $search_term = $_REQUEST['search_term'];
-  $res = code_set_search($form_code_type,$search_term);
+  $res = main_code_set_search($form_code_type,$search_term);
   if ($form_code_type == 'PROD') { // Special case that displays search for products/drugs
     while ($row = sqlFetchArray($res)) {
       $drug_id = $row['drug_id'];

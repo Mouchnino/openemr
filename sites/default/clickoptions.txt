@@ -15,13 +15,16 @@
 # The files that had to be altered for this feature to work are in openemr/interface/patient_file/summary.
 # Three statements were added to 5 files marked with a clickoptions comment and two files were added
 # to the directory, 'clickoptions1.php' and 'clickoptions2.php'.
-medical_problem::HTN
-medical_problem::asthma
-medical_problem::diabetes
-medical_problem::hyperlipidemia
-medication::Norvasc
-medication::Lipitor
-medication::Metformin
+diagnosis:: Axis I
+diagnosis:: Axis II
+diagnosis:: Axis III
+diagnosis:: Axis IV
+diagnosis:: Axis V
+medical_problem::Axis I
+medical_problem::Axis II
+medical_problem::Axis III
+medical_problem::Axis IV
+medical_problem::Axis V
 allergy::penicillin
 allergy::sulfa
 allergy::iodine

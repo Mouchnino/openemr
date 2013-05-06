@@ -1,0 +1,8 @@
+# Ignore Site configuration files
+# Copy or rename .template files with out the .template extension
+# Example:
+# cp config.php.template config.php
+# cp sqlconf.php.template sqlconf.php
+
+config.php
+sqlconf.php

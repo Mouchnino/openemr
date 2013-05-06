@@ -104,13 +104,19 @@
   'msg' => array(xl('Messages')  , 0, 'main/messages/messages.php?form_active=1'),
   'pwd' => array(xl('Password')  , 0, 'usergroup/user_info.php'),
   'prf' => array(xl('Preferences')  , 0, 'super/edit_globals.php?mode=user'),
+  'pck' => array(xl('My Pay')    , 0, 'reports/paycheck.php'),
+  'uur' => array(xl('Unit Usage')    , 0, 'reports/units_report.php'),
+  'rck' => array(xl('CBHA Review Pay')    , 0, 'reports/reviewer_pay_report.php'),
   'adm' => array(xl('Admin')     , 0, 'usergroup/admin_frameset.php'),
   'rep' => array(xl('Reports')   , 0, 'reports/index.php'),
   'ono' => array(xl('Ofc Notes') , 0, 'main/onotes/office_comments.php'),
   'fax' => array(xl('Fax/Scan')  , 0, 'fax/faxq.php'),
   'adb' => array(xl('Addr Bk')   , 0, 'usergroup/addrbook_list.php'),
+  'orl' => array(xl('Proc Prov') , 0, 'orders/procedure_provider_list.php'),
   'ort' => array(xl('Proc Cat')  , 0, 'orders/types.php'),
+  'orc' => array(xl('Proc Load') , 0, 'orders/load_compendium.php'),
   'orb' => array(xl('Proc Bat')  , 0, 'orders/orders_results.php?batch=1'),
+  'ore' => array(xl('E-Reports') , 0, 'orders/list_reports.php'),
   'cht' => array(xl('Chart Trk') , 0, '../custom/chart_tracker.php'),
   'imp' => array(xl('Import')    , 0, '../custom/import.php'),
   'bil' => array(xl('Billing')   , 0, 'billing/billing_report.php'),
@@ -369,6 +375,10 @@ function genFindBlock() {
     // run updater every 60 seconds 
      var repeater = setTimeout("getReminderCount()", 60000); 
    });
+   //piggy-back on this repeater to run other background-services
+   //this is a silent task manager that returns no output
+   $.post("<?php echo $GLOBALS['webroot']; ?>/library/ajax/execute_background_services.php",
+      { skip_timeout_reset: "1", ajax: "1" });
  }   
  
  $(document).ready(function (){
@@ -551,6 +561,23 @@ function goHome() {
     top.frames['RBot'].location='messages/messages.php?form_active=1';
 }
 
+//Function to clear active patient and encounter in the server side
+function clearactive() {
+	top.restoreSession();
+	//Ajax call to clear active patient in session
+	$.ajax({
+	  type: "POST",
+	  url: "<?php echo $GLOBALS['webroot'] ?>/library/ajax/unset_session_ajax.php",
+	  data: { func: "unset_pid"},
+	  success:function( msg ) {
+		clearPatient();
+		top.frames['RTop'].location='<?php echo $GLOBALS['default_top_pane']?>';
+		top.frames['RBot'].location='messages/messages.php?form_active=1';
+	  }
+	});
+    
+	$(parent.Title.document.getElementById('clear_active')).hide();
+}
  // Reference to the search.php window.
  var my_window;
 
@@ -713,6 +740,7 @@ function goHome() {
   }
 
   reloadIssues(pid);
+  $(parent.Title.document.getElementById('clear_active')).show();//To display Clear Active Patient button on selecting a patient
  }
  function setPatientEncounter(EncounterIdArray,EncounterDateArray,CalendarCategoryArray) {
  //This function lists all encounters of the patient.
@@ -790,9 +818,9 @@ function getEncounterTargetFrame( name ) {
   active_pid = 0;
   active_encounter = 0;
   setDivContent('current_patient', '<b><?php xl('None','e'); ?></b>');
-  setTitleContent('current_patient', '<b><?php xl('None','e'); ?></b>');
+  $(parent.Title.document.getElementById('current_patient_block')).hide();
   top.window.parent.Title.document.getElementById('past_encounter').innerHTML='';
-  top.window.parent.Title.document.getElementById('current_encounter').innerHTML="<b><?php echo htmlspecialchars( xl('None'), ENT_QUOTES) ?></b>";
+  $(parent.Title.document.getElementById('current_encounter_block')).hide();
   reloadPatient('');
   syncRadios();
  }
@@ -984,7 +1012,7 @@ if ($GLOBALS['athletic_team']) {
   </li>
   <li class="open"><a class="collapsed" id="patimg" ><span><?php xl('Demographics','e') ?></span></a>
     <ul>
-      <?php genMiscLink('RTop','new','0',xl('Patients'),'main/finder/dynamic_finder.php'); ?>
+      <?php genMiscLink('RTop','new','0',xl('Patient Finder'),'main/finder/dynamic_finder.php'); ?>
       <?php genTreeLink('RTop','new',($GLOBALS['full_new_patient_form'] ? xl('New/Search') : xl('New'))); ?>
       <?php genTreeLink('RTop','dem',xl('Current')); ?>
     </ul>
@@ -1035,7 +1063,8 @@ if ($GLOBALS['athletic_team']) {
       </li>
       <li><a class="collapsed_lv2"><span><?php xl('Patient/Client','e') ?></span></a>
         <ul>
-          <?php genPopLink(xl('List'),'patient_list.php'); ?>
+          <?php genPopLink(xl('List by Activity'),'patient_list.php'); ?>
+          <?php genPopLink(xl('List by Age'),'patient_age.php'); ?>
           <?php if (acl_check('patients', 'med') && !$GLOBALS['disable_prescriptions']) genPopLink(xl('Prescriptions'),'prescriptions_report.php'); ?>
           <?php genPopLink(xl('Referrals'),'referrals_report.php'); ?>
         </ul>
@@ -1073,7 +1102,7 @@ if ($GLOBALS['athletic_team']) {
       <?php if (acl_check('admin', 'users'    )) genMiscLink('RTop','adm','0',xl('Users'),'usergroup/usergroup_admin.php'); ?>
       <?php genTreeLink('RTop','pwd','Users Password Change'); ?>
       <?php if (acl_check('admin', 'practice' )) genMiscLink('RTop','adm','0',xl('Practice'),'../controller.php?practice_settings'); ?>
-      <?php if (acl_check('admin', 'superbill')) genTreeLink('RTop','sup',xl('Services')); ?>
+      <?php if (acl_check('admin', 'superbill')) genTreeLink('RTop','sup',xl('Codes')); ?>
       <?php if (acl_check('admin', 'super'    )) genMiscLink('RTop','adm','0',xl('Layouts'),'super/edit_layout.php'); ?>
       <?php if (acl_check('admin', 'super'    )) genMiscLink('RTop','adm','0',xl('Lists'),'super/edit_list.php'); ?>
       <?php if (acl_check('admin', 'acl'      )) genMiscLink('RTop','adm','0',xl('ACL'),'usergroup/adminacl.php'); ?>
@@ -1101,6 +1130,10 @@ if ($GLOBALS['athletic_team']) {
       <?php genTreeLink('RTop','ono',xl('Ofc Notes')); ?>
       <?php genMiscLink('RTop','adm','0',xl('BatchCom'),'batchcom/batchcom.php'); ?>
       <?php genMiscLink('RTop','prf','0',xl('Preferences'),'super/edit_globals.php?mode=user'); ?>
+      <?php genMiscLink('RTop','pck','0',xl('My Pay'),'reports/paycheck.php'); ?>
+      <?php genMiscLink('RTop','uur','0',xl('Unit Usage'),'reports/units_report.php'); ?>
+      <?php genMiscLink('RTop','rck','0',xl('CBHA Reviewer Pay'),'reports/reviewer_pay_report.php'); ?>
+      <?php if(acl_check('patients','docs')) genMiscLink('RTop','adm','0',xl('New Documents'),'../controller.php?document&list&patient_id=0'); ?>
     </ul>
   </li>
 
@@ -1112,7 +1145,7 @@ if ($GLOBALS['athletic_team']) {
   <?php if($GLOBALS['portal_offsite_enable'] && $GLOBALS['portal_offsite_address'] && acl_check('patientportal','portal'))  genTreeLink('RTop','app',xl('Portal Activity')); ?>
   <li class="open"><a class="expanded" id="patimg" ><span><?php xl('Patient/Client','e') ?></span></a>
     <ul>
-      <?php genMiscLink('RTop','new','0',xl('Patients'),'main/finder/dynamic_finder.php'); ?>
+      <?php genMiscLink('RTop','fin','0',xl('Patients'),'main/finder/dynamic_finder.php'); ?>
       <?php genTreeLink('RTop','new',($GLOBALS['full_new_patient_form'] ? xl('New/Search') : xl('New'))); ?>
       <?php genTreeLink('RTop','dem',xl('Summary')); ?>
       <li class="open"><a class="expanded_lv2"><span><?php xl('Visits','e') ?></span></a>
@@ -1192,10 +1225,13 @@ if (!empty($reg)) {
 <?php } ?>
   <li><a class="collapsed" id="proimg" ><span><?php xl('Procedures','e') ?></span></a>
     <ul>
+      <?php genTreeLink('RTop','orl',xl('Providers')); ?>
       <?php genTreeLink('RTop','ort',xl('Configuration')); ?>
+      <?php genTreeLink('RTop','orc',xl('Load Compendium')); ?>
       <?php genTreeLink('RTop','orp',xl('Pending Review')); ?>
       <?php genTreeLink('RTop','orr',xl('Patient Results')); ?>
       <?php genTreeLink('RTop','orb',xl('Batch Results')); ?>
+      <?php genTreeLink('RTop','ore',xl('Electronic Reports')); ?>
     </ul>
   </li>
   <?php
@@ -1223,7 +1259,7 @@ if (!empty($reg)) {
       <?php
 	  // Changed the target URL from practice settings -> Practice Settings - Pharmacy... Dec 09,09 .. Visolve ... This replaces empty frame with Pharmacy window
 	  if (acl_check('admin', 'practice' )) genMiscLink('RTop','adm','0',xl('Practice'),'../controller.php?practice_settings&pharmacy&action=list'); ?>
-      <?php if (acl_check('admin', 'superbill')) genTreeLink('RTop','sup',xl('Services')); ?>
+      <?php if (acl_check('admin', 'superbill')) genTreeLink('RTop','sup',xl('Codes')); ?>
       <?php if (acl_check('admin', 'super'    )) genMiscLink('RTop','adm','0',xl('Layouts'),'super/edit_layout.php'); ?>
       <?php if (acl_check('admin', 'super'    )) genMiscLink('RTop','adm','0',xl('Lists'),'super/edit_list.php'); ?>
       <?php if (acl_check('admin', 'acl'      )) genMiscLink('RTop','adm','0',xl('ACL'),'usergroup/adminacl.php'); ?>
@@ -1258,7 +1294,8 @@ if (!empty($reg)) {
     <ul>
       <li><a class="collapsed_lv2"><span><?php xl('Clients','e') ?></span></a>
         <ul>
-	  <?php genMiscLink('RTop','rep','0',xl('List'),'reports/patient_list.php'); ?>
+	  <?php genMiscLink('RTop','rep','0',xl('List by Activity'),'reports/patient_list.php'); ?>
+	  <?php genMiscLink('RTop','rep','0',xl('List by Age'),'reports/patient_age.php'); ?>
           <?php if (acl_check('patients', 'med') && !$GLOBALS['disable_prescriptions']) genMiscLink('RTop','rep','0',xl('Rx'),'reports/prescriptions_report.php'); ?>
           <?php if (acl_check('patients', 'med')) genMiscLink('RTop','rep','0',xl('Clinical'),'reports/clinical_reports.php'); ?>
 	  <?php genMiscLink('RTop','rep','0',xl('Referrals'),'reports/referrals_report.php'); ?>
@@ -1274,7 +1311,7 @@ if (!empty($reg)) {
           <?php if ($GLOBALS['enable_amc_tracking']) genMiscLink('RTop','rep','0',xl('AMC Tracking'),'reports/amc_tracking.php'); ?>
         </ul>
       </li>
-      <li class="open"><a class="expanded_lv2"><span><?php xl('Visits','e') ?></span></a>
+      <li><a class="collapsed_lv2"><span><?php xl('Visits','e') ?></span></a>
         <ul>
           <?php if (!$GLOBALS['disable_calendar']) genMiscLink('RTop','rep','0',xl('Appointments'),'reports/appointments_report.php'); ?>
           <?php  genMiscLink('RTop','rep','0',xl('Encounters'),'reports/encounters_report.php'); ?>
@@ -1296,9 +1333,16 @@ if (!empty($reg)) {
       <li><a class="collapsed_lv2"><span><?php xl('Financial','e') ?></span></a>
         <ul>
           <?php genMiscLink('RTop','rep','0',xl('Sales'),'reports/sales_by_item.php'); ?>
-          <?php genMiscLink('RTop','rep','0',xl('Cash Rec'), 'billing/sl_receipts_report.php'); ?>
+          <?php genMiscLink('RTop','rep','0',xl('Counselor Pay'), 'billing/counselor_pay_report.php'); ?>
+          <?php genMiscLink('RTop','rep','0',xl('CBHA Reviewer Pay'), 'billing/reviewer_pay_report2.php'); ?>
+          <?php genMiscLink('RTop','rep','0',xl('Supervision Pay'), 'billing/supervision_pay_report.php'); ?>
+          <?php genMiscLink('RTop','rep','0',xl('SAS Review Pay'), 'reports/SAS_review.php'); ?>
+          <?php genMiscLink('RTop','rep','0',xl('CBHA Supervision Pay'), 'billing/CBHA_Super_pay_report.php'); ?>
+          <?php genMiscLink('RTop','rep','0',xl('Total Receipts'), 'billing/sl_receipts_report.php'); ?>
           <?php genMiscLink('RTop','rep','0',xl('Front Rec'), 'reports/front_receipts_report.php'); ?>
           <?php genMiscLink('RTop','rep','0',xl('Pmt Method'), 'reports/receipts_by_method_report.php'); ?>
+          <?php genMiscLink('RTop','rep','0',xl('Deposits'), 'reports/deposits_report.php'); ?>
+          <?php genMiscLink('RTop','rep','0',xl('Payments'), 'reports/payments_report.php'); ?> 
           <?php genMiscLink('RTop','rep','0',xl('Collections'), 'reports/collections_report.php'); ?>
           <?php genMiscLink('RTop','rep','0',xl('Financial Summary by Service Code'),'reports/svc_code_financial_report.php'); ?>
         </ul>
@@ -1356,6 +1400,15 @@ if (!empty($reg)) {
 ?>
         </ul>
       </li>
+    <?php if (acl_check('admin','super')) { ?>
+      <li><a class="collapsed_lv2"><span><?php echo xlt('Services') ?></span></a>
+        <ul>
+          <?php genMiscLink('RTop','rep','0',xl('Background Services'),'reports/background_services.php'); ?>
+          <?php genMiscLink('RTop','rep','0',xl('Direct Message Log'),'reports/direct_message_log.php'); ?>
+        </ul>
+      </li>
+    <?php } ?>
+
       <?php // genTreeLink('RTop','rep','Other'); ?>
     </ul>
   </li>
@@ -1371,6 +1424,10 @@ if (!empty($reg)) {
       <?php genMiscLink('RTop','adm','0',xl('BatchCom'),'batchcom/batchcom.php'); ?>
       <?php genTreeLink('RTop','pwd',xl('Password')); ?>
       <?php genMiscLink('RTop','prf','0',xl('Preferences'),'super/edit_globals.php?mode=user'); ?>
+      <?php genMiscLink('RTop','pck','0',xl('My Pay'),'reports/paycheck.php'); ?>
+      <?php genMiscLink('RTop','uur','0',xl('Unit Usage'),'reports/units_report.php'); ?>
+      <?php genMiscLink('RTop','rck','0',xl('CBHA Reviewer Pay'),'reports/reviewer_pay_report.php'); ?>
+      <?php if(acl_check('patients','docs')) genMiscLink('RTop','adm','0',xl('New Documents'),'../controller.php?document&list&patient_id=00'); ?>
     </ul>
   </li>
 
@@ -1462,6 +1519,7 @@ if (!$GLOBALS['athletic_team']) {
 <script language='JavaScript'>
 syncRadios();
 </script>
+<?php include_once("frame_format.php"); ?>
 
 </body>
 </html>

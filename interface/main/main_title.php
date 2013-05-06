@@ -1,7 +1,10 @@
 <?php
-include_once("../globals.php");
-?>
+/**
+ * main_title.php - The main titlebar, at the top of the 'concurrent' layout.
+ */
 
+include_once('../globals.php');
+?>
 <html>
 <head>
 
@@ -14,6 +17,7 @@ include_once("../globals.php");
         display:block;
       }
 </style>
+
 <script type="text/javascript" language="javascript">
 function toencounter(rawdata) {
 //This is called in the on change event of the Encounter list.
@@ -64,7 +68,6 @@ function showhideMenu() {
 </script>
 </head>
 <body class="body_title">
-
 <?php
 $res = sqlQuery("select * from users where username='".$_SESSION{"authUser"}."'");
 ?>
@@ -79,7 +82,12 @@ $res = sqlQuery("select * from users where username='".$_SESSION{"authUser"}."'"
 <tr><td style="vertical-align:text-bottom;">
 		<a href='' class="css_button_small" style="margin:0px;vertical-align:top;" id='new0' onClick=" return top.window.parent.left_nav.loadFrame2('new0','RTop','new/new.php')">
 		<span><?php echo htmlspecialchars( xl('NEW PATIENT'), ENT_QUOTES); ?></span></a>
-	</td></tr>
+    </td>
+    <td style="vertical-align:text-bottom;">
+            <a href='' class="css_button_small" style="margin:0px;vertical-align:top;display:none;" id='clear_active' onClick="javascript:parent.left_nav.clearactive();return false;">
+            <span><?php echo htmlspecialchars( xl('CLEAR ACTIVE PATIENT'), ENT_QUOTES); ?></span></a>
+    </td>
+</tr>
 <?php } //end of acl_check('patients','demo','',array('write','addonly') if ?>
 
 	<tr><td valign="baseline"><B>

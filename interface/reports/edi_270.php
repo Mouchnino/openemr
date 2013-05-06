@@ -30,10 +30,11 @@
 	$eleDataSep		= "*";
 
 	// Segment Terminator	
-	$segTer			= "~"; 	
+	$segTer			= ":"; 	
 
 	// Component Element seperator
-	$compEleSep		= "^"; 	
+	$compEleSep		= "~"; 	
+
 	
 	// filter conditions for the report and batch creation 
 
@@ -50,7 +51,7 @@
 	$where  = "e.pc_pid IS NOT NULL AND e.pc_eventDate >= ?";
 	array_push($sqlBindArray, $from_date);
 	
-	//$where .="and e.pc_eventDate = (select max(pc_eventDate) from openemr_postcalendar_events where pc_aid = d.id)";
+	//$where .=" AND e.pc_eventDate = (select max(pc_eventDate) from openemr_postcalendar_events where pc_aid = d.id)";
 
 	if ($to_date) {
 		$where .= " AND e.pc_eventDate <= ?";
@@ -345,8 +346,7 @@
 															if(isset($clearinghouses) && !empty($clearinghouses))
 															{
 																foreach($clearinghouses as $clearinghouse): ?>
-																	<option value='<?php echo htmlspecialchars( $clearinghouse['id']."|".$clearinghouse['id_number']."|".$clearinghouse['x12_sender_id']."|".$clearinghouse['x12_receiver_id']."|".$clearinghouse['x12_version']."|".$clearinghouse['processing_format'], ENT_QUOTES); ?>'
-																		<?php echo $clearinghouse['id'] == $X12info[0] ? " selected " : null; ?>
+																	<option value='<?php echo htmlspecialchars( $clearinghouse['id']."|".$clearinghouse['name']."|".$clearinghouse['id_number']."|".$clearinghouse['x12_sender_id']."|".$clearinghouse['x12_receiver_id']."|".$clearinghouse['x12_version']."|".$clearinghouse['processing_format']."|".$clearinghouse['x12_isa05']."|".$clearinghouse['x12_isa07']."|".$clearinghouse['x12_isa14']."|".$clearinghouse['x12_isa15']."|".$clearinghouse['x12_gs02']."|".$clearinghouse['x12_per06']."|".$clearinghouse['x12_isa01']."|".$clearinghouse['x12_isa02']."|".$clearinghouse['x12_isa03']."|".$clearinghouse['x12_isa04'], ENT_QUOTES); ?>'	<?php echo $clearinghouse['id'] == $X12info[0] ? " selected " : null; ?>
 																	><?php echo htmlspecialchars( $clearinghouse['name'], ENT_NOQUOTES); ?></option>
 														<?php	endforeach; 
 															}

@@ -1,42 +1,35 @@
-<?php             
-//  ------------------------------------------------------------------------ //
-//                OpenEMR Electronic Medical Records System                  //
-//                 Copyright (c) 2012 tajemo.co.za                      //
-//                     <http://www.tajemo.co.za/>                            //
-//  ------------------------------------------------------------------------ //
-//  This program is free software; you can redistribute it and/or modify     //
-//  it under the terms of the GNU General Public License as published by     //
-//  the Free Software Foundation; either version 2 of the License, or        //
-//  (at your option) any later version.                                      //
-//                                                                           //
-//  You may not change or alter any portion of this comment or credits       //
-//  of supporting developers from this source code or any supporting         //
-//  source code which is considered copyrighted (c) material of the          //
-//  original comment or credit authors.                                      //
-//                                                                           //
-//  This program is distributed in the hope that it will be useful,          //
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of           //
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            //
-//  GNU General Public License for more details.                             //
-//                                                                           //
-//  You should have received a copy of the GNU General Public License        //
-//  along with this program; if not, write to the Free Software              //
-//  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA // 
-// --------------------------------------------------------------------------//
-// Original Author of this file: Craig Bezuidenhout (Tajemo Enterprises)     //
-// Purpose of this file: Used for displaying dated reminders                 //
-// --------------------------------------------------------------------------//     
+<?php
+/**
+ * Used for displaying dated reminders. 
+ *
+ * Copyright (C) 2012 tajemo.co.za <http://www.tajemo.co.za/>
+ *
+ * LICENSE: This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 3
+ * of the License, or (at your option) any later version.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <http://opensource.org/licenses/gpl-license.php>;.
+ *
+ * @package OpenEMR
+ * @author  Craig Bezuidenhout <http://www.tajemo.co.za/>
+ * @link    http://www.open-emr.org
+ */
  
- // removed as jquery is already called in messages page (if you need to use jQuery, uncomment it futher down)
- // not neeeded as messages page handles this
- //       $fake_register_globals=false;
- //       $sanitize_all_escapes=true; 
-        require_once("../../globals.php");
-        require_once("$srcdir/htmlspecialchars.inc.php");  
-        require_once("$srcdir/dated_reminder_functions.php"); 
-             
+// removed as jquery is already called in messages page (if you need to use jQuery, uncomment it futher down)
+// not neeeded as messages page handles this
+//       $fake_register_globals=false;
+//       $sanitize_all_escapes=true;
+require_once('../../globals.php');
+require_once("$srcdir/htmlspecialchars.inc.php");
+require_once("$srcdir/dated_reminder_functions.php");
+
         $days_to_show = 5;
-        $alerts_to_show = 5;
+        $alerts_to_show = 50;
         $updateDelay = 60; // time is seconds 
         
         
@@ -98,14 +91,14 @@
       </style> 
       <script type="text/javascript">
          $(document).ready(function (){ 
-            <?php if(!$hasAlerts) echo '$(".hideDR").html("<span>'.xla('Show Reminders').'</span>"); $(".drHide").hide();'; ?> 
+            <?php if(!$hasAlerts) echo '$(".hideDR").html("<span>'.xlt('Show Reminders').'</span>"); $(".drHide").hide();'; ?>
             $(".hideDR").click(function(){
-              if($(this).html() == "<span><?php echo xla('Hide Reminders') ?></span>"){  
-                $(this).html("<span><?php echo xla('Show Reminders') ?></span>"); 
+              if($(this).html() == "<span><?php echo xlt('Hide Reminders') ?></span>"){  
+                $(this).html("<span><?php echo xlt('Show Reminders') ?></span>"); 
                 $(".drHide").slideUp("slow");
               }
               else{  
-                $(this).html("<span><?php echo xla('Hide Reminders') ?></span>");  
+                $(this).html("<span><?php echo xlt('Hide Reminders') ?></span>");  
                 $(".drHide").slideDown("slow");
               }
             }) 
@@ -126,10 +119,10 @@
            function updateme(id){ 
              refreshInterval = <?php echo $updateDelay ?>;
              if(id > 0){
-              $(".drTD").html('<p style="text-size:3em; margin-left:200px; color:black; font-weight:bold;"><?php echo xla("Processing") ?>...</p>'); 
+              $(".drTD").html('<p style="text-size:3em; margin-left:200px; color:black; font-weight:bold;"><?php echo xlt("Processing") ?>...</p>'); 
              }
              if(id == 'new'){
-              $(".drTD").html('<p style="text-size:3em; margin-left:200px; color:black; font-weight:bold;"><?php echo xla("Processing") ?>...</p>');
+              $(".drTD").html('<p style="text-size:3em; margin-left:200px; color:black; font-weight:bold;"><?php echo xlt("Processing") ?>...</p>');
              }    
              top.restoreSession();
              // Send the skip_timeout_reset parameter to not count this as a manual entry in the
@@ -141,7 +134,7 @@
                   alert("<?php echo addslashes(xl('Error Removing Message')) ?>");  
                 }else{  
                   if(id > 0){
-                    $(".drTD").html('<p style="text-size:3em; margin-left:200px; color:black; font-weight:bold;"><?php echo xla("Refreshing Reminders") ?> ...</p>');
+                    $(".drTD").html('<p style="text-size:3em; margin-left:200px; color:black; font-weight:bold;"><?php echo xlt("Refreshing Reminders") ?> ...</p>');
                   }
                   $(".drTD").html(data); 
                 }   

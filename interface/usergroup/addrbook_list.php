@@ -8,7 +8,7 @@
  
  // Improved slightly by tony@mi-squared.com 2011, added organization to view
  // and search
-
+//  Massively hacked by Art@OEMR.org 2011-2012 to make sense finally and get some real use out of it.
  //SANITIZE ALL ESCAPES
  $sanitize_all_escapes=true;
  //
@@ -36,7 +36,7 @@ $sqlBindArray = array();
 $query = "SELECT u.*, lo.option_id AS ab_name, lo.option_value as ab_option FROM users AS u " .
   "LEFT JOIN list_options AS lo ON " .
   "list_id = 'abook_type' AND option_id = u.abook_type " .
-  "WHERE u.active = 1 AND ( u.authorized = 1 OR u.username = '' ) ";
+  "WHERE u.active >= 0 AND ( u.authorized >=0 OR u.username = '' ) ";
 if ($form_organization) {
  $query .= "AND u.organization LIKE ? ";
  array_push($sqlBindArray,$form_organization."%");
@@ -155,10 +155,10 @@ function doedclick_edit(userid) {
   <td><?php echo xlt('Mobile'); ?></td>
   <td><?php echo xlt('Fax'); ?></td>
   <td><?php echo xlt('Email'); ?></td>
-  <td><?php echo xlt('Street'); ?></td>
+ <!-- <td><?php echo xlt('Street'); ?></td>
   <td><?php echo xlt('City'); ?></td>
   <td><?php echo xlt('State'); ?></td>
-  <td><?php echo xlt('Postal'); ?></td>
+  <td><?php echo xlt('Postal'); ?></td>-->
  </tr>
 
 <?php
@@ -192,10 +192,10 @@ function doedclick_edit(userid) {
   echo "  <td>" . text($row['phonecell']) . "</td>\n";
   echo "  <td>" . text($row['fax'])       . "</td>\n";
   echo "  <td>" . text($row['email'])     . "</td>\n";
-  echo "  <td>" . text($row['street'])    . "</td>\n";
-  echo "  <td>" . text($row['city'])      . "</td>\n";
-  echo "  <td>" . text($row['state'])     . "</td>\n";
-  echo "  <td>" . text($row['zip'])       . "</td>\n";
+ // echo "  <td>" . text($row['street'])    . "</td>\n";
+ // echo "  <td>" . text($row['city'])      . "</td>\n";
+ // echo "  <td>" . text($row['state'])     . "</td>\n";
+ // echo "  <td>" . text($row['zip'])       . "</td>\n";
   echo " </tr>\n";
  }
 ?>

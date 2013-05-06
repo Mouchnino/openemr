@@ -128,7 +128,7 @@ if (empty($_SESSION['site_id']) || !empty($_GET['site'])) {
     if (!is_dir($GLOBALS['OE_SITES_BASE'] . "/$tmp")) $tmp = "default";
   }
   if (empty($tmp) || preg_match('/[^A-Za-z0-9\\-.]/', $tmp))
-    die("Site ID '$tmp' contains invalid characters.");
+    die("Site ID '". htmlspecialchars($tmp,ENT_NOQUOTES) . "' contains invalid characters.");
   if (!isset($_SESSION['site_id']) || $_SESSION['site_id'] != $tmp) {
     $_SESSION['site_id'] = $tmp;
     //error_log("Session site ID has been set to '$tmp'"); // debugging
@@ -178,10 +178,10 @@ $GLOBALS['edi_271_file_path'] = $GLOBALS['OE_SITE_DIR'] . "/edi/";
 include_once (dirname(__FILE__) . "/../library/translation.inc.php");
 
 // Include convenience functions with shorter names than "htmlspecialchars"
-include_once (dirname(__FILE__) . "/../library/htmlspecialchars.inc.php");
+require_once (dirname(__FILE__) . "/../library/htmlspecialchars.inc.php");
 
 // Include sanitization/checking function (for security)
-include_once (dirname(__FILE__) . "/../library/sanitize.inc.php");
+require_once (dirname(__FILE__) . "/../library/sanitize.inc.php");
 
 // Includes functions for date internationalization
 include_once (dirname(__FILE__) . "/../library/date_functions.php");
@@ -307,7 +307,7 @@ if ($GLOBALS['concurrent_layout']) {
  $nav_bg_line = ' bgcolor="#94d6e7" ';
 }
 $login_filler_line = ' bgcolor="#f7f0d5" ';
-$logocode = "<img src='$web_root/sites/" . $_SESSION['site_id'] . "/images/login_logo.gif'>";
+$logocode = "<img src='$web_root/sites/" . $_SESSION['site_id'] . "/images/login_logo.png'>";
 $linepic = "$rootdir/pic/repeat_vline9.gif";
 $table_bg = ' bgcolor="#cccccc" ';
 $GLOBALS['style']['BGCOLOR1'] = "#cccccc";
@@ -315,7 +315,7 @@ $GLOBALS['style']['TEXTCOLOR11'] = "#222222";
 $GLOBALS['style']['HIGHLIGHTCOLOR'] = "#dddddd";
 $GLOBALS['style']['BOTTOM_BG_LINE'] = $bottom_bg_line;
 // The height in pixels of the Logo bar at the top of the login page:
-$GLOBALS['logoBarHeight'] = 110;
+$GLOBALS['logoBarHeight'] = 120;
 // The height in pixels of the Navigation bar:
 $GLOBALS['navBarHeight'] = 22;
 // The height in pixels of the Title bar:

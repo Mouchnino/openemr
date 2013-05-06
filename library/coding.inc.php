@@ -18,6 +18,7 @@ if (empty($FEE_SHEET_COLUMNS)) $FEE_SHEET_COLUMNS = 2;
 //
 if ($_POST['bn_save']) {
 	$provid = $_POST['ProviderID'];
+	$counsid = $_POST['CounselorID'];
 	if (! $provid) $provid = $_SESSION["authUserID"];
 	$bill = $_POST['bill'];
 	for ($lino = 1; $bill["$lino"]['code_type']; ++$lino) {
@@ -289,6 +290,7 @@ function echoLine($lino, $codetype, $code, $modifier, $auth = TRUE, $del = FALSE
 //
 $lino = 0;
 $encounter_provid = -1;
+$encounter_counsel= -1;
 if ($result = getBillingByEncounter($pid, $encounter, "*") ) {
 	foreach ($result as $iter) {
 		++$lino;
@@ -296,7 +298,7 @@ if ($result = getBillingByEncounter($pid, $encounter, "*") ) {
 		// list($code, $modifier) = explode("-", $iter["code"]);
 		echoLine($lino, $iter["code_type"], trim($iter["code"]), trim($iter["modifier"]),
 			$iter["authorized"], $del, $iter["fee"], $iter["id"], $iter["billed"], $iter["code_text"]);
-		if ($encounter_provid < 0 && ! $del) $encounter_provid = $iter["provider_id"];
+		if ($encounter_provid < 0 && ! $del) {$encounter_provid = $iter["provider_id"]; $encounter_counsel = $iter["counselor_id"];
 	}
 }
 
@@ -388,6 +390,29 @@ while ($row = sqlFetchArray($res)) {
 	$provid = $row['id'];
 	echo "    <option value='$provid'";
 	if ($provid == $encounter_provid) echo " selected";
+	echo ">" . $row['lname'] . ", " . $row['fname'] . "\n";
+}
+
+echo "   </select>\n";
+?>
+
+<?php
+// Art shit here.....Build a drop-down list of providers.  This includes users who
+// have the word "provider" anywhere in their "additional info"
+// field, so that we can define providers (for billing purposes)
+// who do not appear in the calendar.
+//
+$query = "SELECT id, lname, fname FROM users WHERE " .
+	"authorized = 1 OR info LIKE '%provider%' ORDER BY lname, fname";
+$res = sqlStatement($query);
+
+echo "   <select name='CounselorID'>\n";
+echo "    <option value=''>-- Please Select --\n";
+
+while ($row = sqlFetchArray($res)) {
+	$counsid = $row['id'];
+	echo "    <option value='$counsid'";
+	if ($counsid == $encounter_counsel) echo " selected";
 	echo ">" . $row['lname'] . ", " . $row['fname'] . "\n";
 }
 

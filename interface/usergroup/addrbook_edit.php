@@ -154,6 +154,18 @@ td { font-size:10pt; }
     "phonew2 = "      . invalue('form_phonew2')      . ", " .
     "phonecell = "    . invalue('form_phonecell')    . ", " .
     "fax = "          . invalue('form_fax')          . ", " .
+    
+     "hiredate = "        . invalue('form_hiredate')        . ", "  .
+     "evaldate = "        . invalue('form_evaldate')        . ", "  .
+     "supdate = "        . invalue('form_supdate')        . ", "  .
+     "liabdate = "        . invalue('form_liabdate')        . ", "  .
+     "screendate = "        . invalue('form_screendate')        . ", "  .
+     "keycode = "        . invalue('form_keycode')        . ", "  .
+     
+    "rate_one = "        . invalue('form_rate_one')        . ", "  .
+    "rate_two = "        . invalue('form_rate_two')        . ", "  .
+    "rate_three = "        . invalue('form_rate_three')        . ", "  .
+    "c_super = "        . invalue('form_c_super')        . ", "  .
     "notes = "        . invalue('form_notes')        . " "  .
     "WHERE id = '" . add_escape_custom($userid) . "'";
     sqlStatement($query);
@@ -167,7 +179,7 @@ td { font-size:10pt; }
     "specialty, organization, valedictory, assistant, billname, email, url, " .
     "street, streetb, city, state, zip, " .
     "street2, streetb2, city2, state2, zip2, " .
-    "phone, phonew1, phonew2, phonecell, fax, notes, abook_type "            .
+    "phone, phonew1, phonew2, phonecell, fax, notes,hiredate,evaldate,supdate,liabdate,screendate,keycode,rate_one,rate_two,rate_three,c_super, abook_type "            .
     ") VALUES ( "                        .
     "'', "                               . // username
     "'', "                               . // password
@@ -209,6 +221,16 @@ td { font-size:10pt; }
     invalue('form_phonecell')     . ", " .
     invalue('form_fax')           . ", " .
     invalue('form_notes')         . ", " .
+     invalue('form_hiredate')         . ", " .
+      invalue('form_evaldate')         . ", " .
+       invalue('form_supdate')         . ", " .
+        invalue('form_liabdate')         . ", " .
+         invalue('form_screendate')         . ", " .
+          invalue('form_keycode')         . ", " .
+    invalue('form_rate_one')         . ", " .
+    invalue('form_rate_two')         . ", " .
+    invalue('form_rate_three')         . ", " .
+    invalue('form_c_super')         . ", " .
     invalue('form_abook_type')    . " "  .
    ")");
 
@@ -448,6 +470,46 @@ td { font-size:10pt; }
   </td>
  </tr>
 
+ <tr>
+  <td nowrap><b><?php echo xlt('Hire Date'); ?>:</b></td>
+  <td>
+   <input type='text' size='10' name='form_hiredate' maxlength='10'
+    value='<?php echo attr($row['hiredate']); ?>' class='inputtext' />&nbsp;
+   <b><?php echo xlt('Eval Date'); ?>:</b> <input type='text' size='10' name='form_evaldate' maxlength='10'
+    value='<?php echo attr($row['evaldate']); ?>' class='inputtext' />&nbsp;
+   <b><?php echo xlt('Supervision Agreement'); ?>:</b> <input type='text' size='10' name='form_supdate' maxlength='10'
+    value='<?php echo attr($row['supdate']); ?>' class='inputtext' /> 
+  </td>
+ </tr>
+  <tr>
+  <td nowrap><b><?php echo xlt('Background Screening'); ?>:</b></td>
+  <td>
+   <input type='text' size='10' name='form_screendate' maxlength='10'
+    value='<?php echo attr($row['screendate']); ?>' class='inputtext' />&nbsp;
+   <b><?php echo xlt('Liab. Ins.'); ?>:</b> <input type='text' size='10' name='form_liabdate' maxlength='10'
+    value='<?php echo attr($row['liabdate']); ?>' class='inputtext' />&nbsp;
+   <b><?php echo xlt('Pass'); ?>:</b> <input type='text' size='10' name='form_keycode' maxlength='10'
+    value='<?php echo attr($row['keycode']); ?>' class='inputtext' /> 
+  </td>
+ </tr>
+ 
+ 
+ 
+
+ <tr>
+  <td nowrap><b><?php echo xlt('Rate1','e'); ?>:</b></td>
+  <td>
+   <input type='text' size='10' name='form_rate_one' maxlength='10'
+    value='<?php echo attr($row['rate_one']); ?>' class='inputtext' />&nbsp;
+   <b><?php xl('Rate2','e'); ?>:</b> <input type='text' size='10' name='form_rate_two' maxlength='10'
+    value='<?php echo attr($row['rate_two']); ?>' class='inputtext' />&nbsp;
+   <b><?php xl('Rate3','e'); ?>:</b> <input type='text' size='10' name='form_rate_three' maxlength='10'
+    value='<?php echo attr($row['rate_three']); ?>' class='inputtext' />&nbsp;
+   <b><?php xl('Clinical Supervisor#','e'); ?>:</b> <input type='text' size='2' name='form_c_super' maxlength='3'
+    value='<?php echo attr($row['c_super']); ?>' class='inputtext' />
+  </td>
+ </tr> 
+ 
  <tr>
   <td nowrap><b><?php echo xlt('Notes'); ?>:</b></td>
   <td>

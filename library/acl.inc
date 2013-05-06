@@ -96,17 +96,24 @@
     $section_aro_value = 'users';
   }
 
-  // acl_check should return FALSE if access is denied and will return TRUE
-  // if access is allowed. The following return_value(s) can be evaluated
-  // for by placing in the $return_value parameter; it can be placed
-  // as a single value or can send as an array of values (so $return_value
-  // can be a string or an array).
-  //
-  // * view    - the user may view but not add or modify entries
-  // * write   - the user may add or modify the ACO
-  // * wsome   - the user has limited add/modify access to the ACO
-  // * addonly - the user may view and add but not modify entries
-  //
+/**
+ * Check if a user has a given type or types of access to an access control object.
+ * 
+ * This function will check for access to the given ACO.
+ * view    - The user may view but not add or modify entries
+ * write   - The user may add or modify the ACO
+ * wsome   - The user has limited add/modify access to the ACO
+ * addonly - The user may view and add but not modify entries
+ *
+ * @param string       $section      Category of ACO
+ * @param string       $value        Subcategory of ACO
+ * @param string       $user         Optional user being checked for access.
+ * @param string|array $return_value Type or types of access being requested.
+ * @return bool|array  FALSE if access is denied, TRUE if allowed. An
+ *                     array() of bools is returned if $return_value is an
+ *		       array, representing results for each type of access
+ * 		       requested.
+ */
   function acl_check($section, $value, $user = '', $return_value = '') {
     global $gacl_object, $phpgacl_location, $section_aro_value;
     if (! $user) $user = $_SESSION['authUser'];

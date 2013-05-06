@@ -23,7 +23,7 @@
               elseif(strpos($criteria_value,"billing.billed = '0'")!== false)
                {
                 //3 is an error condition
-                $billstring .= ' AND '."(billing.billed = '0' or (billing.billed = '1' and billing.bill_process = '3'))";
+                $billstring .= ' AND '."(billing.billed is null or billing.billed = '0' or (billing.billed = '1' and billing.bill_process = '3'))";
                }
               elseif(strpos($criteria_value,"billing.billed = '7'")!== false)
                {
@@ -93,7 +93,7 @@
         // which is the date in the form_encounter table.
         //
         $sql = "SELECT distinct form_encounter.date AS enc_date, form_encounter.pid AS enc_pid, " .
-            "form_encounter.encounter AS enc_encounter, form_encounter.provider_id AS enc_provider_id, billing.* " .
+            "form_encounter.encounter AS enc_encounter, form_encounter.counselor_id AS enc_provider_id, billing.* " .
             "FROM form_encounter " .
             "LEFT OUTER JOIN billing ON " .
             "billing.encounter = form_encounter.encounter AND " .
